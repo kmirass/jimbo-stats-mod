@@ -1,0 +1,13 @@
+{
+	"id": "kmirastats",
+	"name": "kmirastats",
+	"display_name": "kmirastats",
+	"author": ["kmiras"],
+	"description": "kmirastats",
+	"prefix": "kmirastats",
+	"main_file": "kmirastats.lua",
+	"priority": 0,
+	"badge_colour": "",
+	"badge_text_colour": "",
+	"version": "0.0.1"
+}

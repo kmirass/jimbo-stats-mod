@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Estadísticas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .stat-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 24px;
+            color: #4CAF50;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .api-keys-list {
+            margin-top: 20px;
+        }
+        .api-key-item {
+            background-color: #f9f9f9;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        .notification {
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Panel de Estadísticas</h1>
+        
+        <div class="notification" id="notification"></div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="openTab('stats')">Estadísticas</div>
+            <div class="tab" onclick="openTab('api-keys')">API Keys</div>
+        </div>
+        
+        <div id="stats" class="tab-content active">
+            <div class="tabs">
+                <div class="tab active" onclick="filterStats('todas')">Todas</div>
+                <div class="tab" onclick="filterStats('hoy')">Hoy</div>
+                <div class="tab" onclick="filterStats('semana')">Esta semana</div>
+                <div class="tab" onclick="filterStats('mes')">Este mes</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Total Partidas</div>
+                    <div class="stat-value" id="total-partidas">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Total Partidas Ganadas</div>
+                    <div class="stat-value" id="total-ganadas">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Total Cartas Jugadas</div>
+                    <div class="stat-value" id="total-jugadas">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Total Cartas Descartadas</div>
+                    <div class="stat-value" id="total-descartadas">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Total Cartas Compradas</div>
+                    <div class="stat-value" id="total-compradas">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Total Veces Rerolled</div>
+                    <div class="stat-value" id="total-rerolled">-</div>
+                </div>
+            </div>
+            
+            <h3>Datos Detallados</h3>
+            <div id="datos-detallados">
+                <table id="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>API Key</th>
+                            <th>Mazo</th>
+                            <th>Stake</th>
+                            <th>Resultado</th>
+                            <th>Ronda</th>
+                            <th>Mejor Mano</th>
+                            <th>Cartas Jugadas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="8">Cargando estadísticas</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <button onclick="actualizarDatos()">Actualizar Datos</button>
+        </div>
+        
+        <div id="api-keys" class="tab-content">
+            <h2>API Keys Registradas</h2>
+            <div class="api-keys-list" id="keys-list">
+                <table id="api-keys-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>API Key</th>
+                            <th>Fecha de Registro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="3">Cargando API keys...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="actualizarApiKeys()">Actualizar API Keys</button>
+        </div>
+    </div>
+
+    <script>
+        // Función para mostrar notificaciones
+        function mostrarNotificacion(mensaje, tipo = 'success') {
+            const notificacion = document.getElementById('notification');
+            notificacion.textContent = mensaje;
+            notificacion.style.display = 'block';
+            
+            if (tipo === 'error') {
+                notificacion.style.backgroundColor = '#f2dede';
+                notificacion.style.color = '#a94442';
+            } else {
+                notificacion.style.backgroundColor = '#dff0d8';
+                notificacion.style.color = '#3c763d';
+            }
+            
+            // Ocultar la notificación después de 5 segundos
+            setTimeout(() => {
+                notificacion.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Función para cambiar entre pestañas
+        function openTab(tabName) {
+            // Ocultar todos los contenidos de pestañas
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            // Desactivar todas las pestañas
+            const tabs = document.querySelectorAll('.tabs > .tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            // Activar la pestaña seleccionada y su contenido
+            document.getElementById(tabName).classList.add('active');
+            
+            // Encontrar y activar el botón de la pestaña
+            const tabButtons = document.querySelectorAll('.tabs > .tab');
+            for (let i = 0; i < tabButtons.length; i++) {
+                if (tabButtons[i].textContent.toLowerCase().includes(tabName.replace('-', ' '))) {
+                    tabButtons[i].classList.add('active');
+                }
+            }
+            
+            // Cargar datos específicos según la pestaña
+            if (tabName === 'api-keys') {
+                actualizarApiKeys();
+            } else if (tabName === 'stats') {
+                actualizarDatos();
+            }
+        }
+        
+        // Función para filtrar estadísticas por período
+        function filterStats(periodo) {
+            // Actualizar la UI para mostrar qué filtro está activo
+            const filtroTabs = document.querySelectorAll('#stats .tabs .tab');
+            for (let i = 0; i < filtroTabs.length; i++) {
+                filtroTabs[i].classList.remove('active');
+                if (filtroTabs[i].textContent.toLowerCase().includes(periodo)) {
+                    filtroTabs[i].classList.add('active');
+                }
+            }
+            
+            // Cargar las estadísticas según el período seleccionado
+            actualizarDatos(periodo);
+        }
+        
+        // Función para formatear fecha
+        function formatearFecha(fechaStr) {
+            const fecha = new Date(fechaStr.replace(' ', 'T'));
+            return fecha.toLocaleString();
+        }
+        
+        // Función para actualizar los datos de estadísticas
+        function actualizarDatos(periodo = 'todas') {
+            document.getElementById('datos-detallados').innerHTML = '<p>Actualizando datos...</p>';
+            
+            fetch('/api/stats')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Filtrar datos según el período seleccionado
+                    let statsData = data;
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    
+                    if (periodo === 'hoy') {
+                        statsData = data.filter(item => {
+                            const fecha = new Date(item.time.replace(' ', 'T'));
+                            return fecha >= hoy;
+                        });
+                    } else if (periodo === 'semana') {
+                        const inicioSemana = new Date(hoy);
+                        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+                        statsData = data.filter(item => {
+                            const fecha = new Date(item.time.replace(' ', 'T'));
+                            return fecha >= inicioSemana;
+                        });
+                    } else if (periodo === 'mes') {
+                        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                        statsData = data.filter(item => {
+                            const fecha = new Date(item.time.replace(' ', 'T'));
+                            return fecha >= inicioMes;
+                        });
+                    }
+                    
+                    // Calcular totales
+                    const totalPartidas = statsData.length;
+                    const totalGanadas = statsData.filter(item => item.won).length;
+                    const totalJugadas = statsData.reduce((sum, item) => sum + item.cardsPlayed, 0);
+                    const totalDescartadas = statsData.reduce((sum, item) => sum + item.cardsDiscarded, 0);
+                    const totalCompradas = statsData.reduce((sum, item) => sum + item.cardsPurchased, 0);
+                    const totalRerolled = statsData.reduce((sum, item) => sum + item.timesRerolled, 0);
+                    
+                    // Actualizar los valores en la interfaz
+                    document.getElementById('total-partidas').textContent = totalPartidas;
+                    document.getElementById('total-ganadas').textContent = totalGanadas;
+                    document.getElementById('total-jugadas').textContent = totalJugadas;
+                    document.getElementById('total-descartadas').textContent = totalDescartadas;
+                    document.getElementById('total-compradas').textContent = totalCompradas;
+                    document.getElementById('total-rerolled').textContent = totalRerolled;
+                    
+                    // Crear tabla de datos detallados
+                    const tabla = document.createElement('table');
+                    tabla.id = 'stats-table';
+                    
+                    // Crear encabezado de la tabla
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    
+                    const headers = ['Fecha', 'API Key', 'Mazo', 'Stake', 'Resultado', 'Ronda', 'Mejor Mano', 'Cartas Jugadas'];
+                    headers.forEach(headerText => {
+                        const th = document.createElement('th');
+                        th.textContent = headerText;
+                        headerRow.appendChild(th);
+                    });
+                    
+                    thead.appendChild(headerRow);
+                    tabla.appendChild(thead);
+                    
+                    // Crear cuerpo de la tabla
+                    const tbody = document.createElement('tbody');
+                    
+                    // Ordenar los datos por fecha (más recientes primero)
+                    statsData.sort((a, b) => new Date(b.time) - new Date(a.time));
+                    
+                    // Añadir filas con los datos
+                    if (statsData.length > 0) {
+                        statsData.forEach(item => {
+                            const row = document.createElement('tr');
+                            
+                            // Fecha
+                            const tdFecha = document.createElement('td');
+                            tdFecha.textContent = formatearFecha(item.time);
+                            row.appendChild(tdFecha);
+                            
+                            // API Key
+                            const tdApiKey = document.createElement('td');
+                            tdApiKey.textContent = item.api_key;
+                            row.appendChild(tdApiKey);
+                            
+                            // Mazo
+                            const tdMazo = document.createElement('td');
+                            tdMazo.textContent = item.deck;
+                            row.appendChild(tdMazo);
+                            
+                            // Stake
+                            const tdStake = document.createElement('td');
+                            tdStake.textContent = item.stake;
+                            row.appendChild(tdStake);
+                            
+                            // Resultado
+                            const tdResultado = document.createElement('td');
+                            tdResultado.textContent = item.won ? 'Ganada' : 'Perdida';
+                            tdResultado.style.color = item.won ? '#4CAF50' : '#f44336';
+                            row.appendChild(tdResultado);
+                            
+                            // Ronda
+                            const tdRonda = document.createElement('td');
+                            tdRonda.textContent = item.round;
+                            row.appendChild(tdRonda);
+                            
+                            // Mejor Mano
+                            const tdMejorMano = document.createElement('td');
+                            tdMejorMano.textContent = item.bestHand;
+                            row.appendChild(tdMejorMano);
+                            
+                            // Cartas Jugadas
+                            const tdCartasJugadas = document.createElement('td');
+                            tdCartasJugadas.textContent = item.cardsPlayed;
+                            row.appendChild(tdCartasJugadas);
+                            
+                            tbody.appendChild(row);
+                        });
+                    } else {
+                        const row = document.createElement('tr');
+                        const td = document.createElement('td');
+                        td.colSpan = 8;
+                        td.textContent = 'No hay datos para este período';
+                        row.appendChild(td);
+                        tbody.appendChild(row);
+                    }
+                    
+                    tabla.appendChild(tbody);
+                    
+                    // Actualizar la tabla en la interfaz
+                    const datosDetallados = document.getElementById('datos-detallados');
+                    datosDetallados.innerHTML = '';
+                    datosDetallados.appendChild(tabla);
+                    
+                    mostrarNotificacion(`Estadísticas actualizadas (${totalPartidas} partidas)`);
+                })
+                .catch(error => {
+                    console.error('Error al cargar estadísticas:', error);
+                    document.getElementById('datos-detallados').innerHTML = '<p>Error al cargar las estadísticas. Por favor, inténtelo de nuevo.</p>';
+                    mostrarNotificacion('Error al cargar las estadísticas: ' + error.message, 'error');
+                });
+        }
+        
+        // Función para cargar y mostrar las API keys
+        function actualizarApiKeys() {
+            const keysList = document.getElementById('keys-list');
+            keysList.innerHTML = '<p>Cargando API keys...</p>';
+            
+            fetch('/api/keys')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Crear tabla para las API keys
+                    const tabla = document.createElement('table');
+                    tabla.id = 'api-keys-table';
+                    
+                    // Crear encabezado de la tabla
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    
+                    const headers = ['#', 'API Key', 'Fecha de Registro'];
+                    headers.forEach(headerText => {
+                        const th = document.createElement('th');
+                        th.textContent = headerText;
+                        headerRow.appendChild(th);
+                    });
+                    
+                    thead.appendChild(headerRow);
+                    tabla.appendChild(thead);
+                    
+                    // Crear cuerpo de la tabla
+                    const tbody = document.createElement('tbody');
+                    
+                    if (data.keys && data.keys.length > 0) {
+                        data.keys.forEach((key, index) => {
+                            const row = document.createElement('tr');
+                            
+                            // Número
+                            const tdNum = document.createElement('td');
+                            tdNum.textContent = key.id || (index + 1);
+                            row.appendChild(tdNum);
+                            
+                            // API Key
+                            const tdApiKey = document.createElement('td');
+                            tdApiKey.textContent = key.key || key;
+                            row.appendChild(tdApiKey);
+                            
+                            // Fecha de Registro
+                            const tdFecha = document.createElement('td');
+                            tdFecha.textContent = key.date || 'No disponible';
+                            row.appendChild(tdFecha);
+                            
+                            tbody.appendChild(row);
+                        });
+                    } else {
+                        const row = document.createElement('tr');
+                        const td = document.createElement('td');
+                        td.colSpan = 3;
+                        td.textContent = 'No hay API keys registradas';
+                        row.appendChild(td);
+                        tbody.appendChild(row);
+                    }
+                    
+                    tabla.appendChild(tbody);
+                    
+                    // Actualizar la tabla en la interfaz
+                    keysList.innerHTML = '';
+                    keysList.appendChild(tabla);
+                    
+                    mostrarNotificacion(`API keys actualizadas (${data.keys ? data.keys.length : 0} keys)`);
+                })
+                .catch(error => {
+                    console.error('Error al cargar API keys:', error);
+                    keysList.innerHTML = '<p>Error al cargar las API keys. Por favor, inténtelo de nuevo.</p>';
+                    mostrarNotificacion('Error al cargar las API keys: ' + error.message, 'error');
+                });
+        }
+        
+        // Inicializar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cargar datos iniciales
+            actualizarDatos();
+            
+            // Configurar actualizaciones periódicas
+            setInterval(actualizarDatos, 300000); // Actualizar estadísticas cada 5 minutos
+            setInterval(actualizarApiKeys, 300000); // Actualizar API keys cada 5 minutos
+        });
+    </script>
+</body>
+</html>
