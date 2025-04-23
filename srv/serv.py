@@ -184,7 +184,7 @@ class StatsHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'Not Found')
 
-def run_server(port=8080):
+def run_server(port=1204):
     server_address = ('', port)
     httpd = ThreadingHTTPServer(server_address, StatsHandler)
     print(f"Servidor iniciado en el puerto {port}")
