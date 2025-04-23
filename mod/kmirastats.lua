@@ -1,12 +1,43 @@
 local https = require("SMODS.https")
 local KS = SMODS.current_mod
 
+-- Simple JSON encode function
+local function json_encode(data)
+    if type(data) == "string" then
+        return string.format('"%s"', data:gsub('"', '\\"'))
+    elseif type(data) == "table" then
+        local parts = {}
+        for k, v in pairs(data) do
+            table.insert(parts, string.format('"%s":%s', k, json_encode(v)))
+        end
+        return "{" .. table.concat(parts, ",") .. "}"
+    else
+        return tostring(data)
+    end
+end
+
+-- Function to check if API key contains only valid characters
+local function is_valid_api_key(key)
+    -- Check if key starts with "ks-"
+    if not key:match("^ks%-") then return false end
+    
+    -- Remove prefix for length check
+    local key_without_prefix = key:sub(4)
+    
+    -- Check length (should be 16 chars after prefix)
+    if #key_without_prefix ~= 16 then return false end
+    
+    -- Check valid characters (a-z, A-Z, 0-9)
+    local valid_pattern = "^[%w]+$"
+    return key_without_prefix:match(valid_pattern) ~= nil
+end
+
 -- ###################################
 -- ######## MOD CONFIGURATION ########
 -- ###################################
 
 -- Server URL to send statistics
-local SERVER_URL = "https://stats.kmiras.com:1204"
+local SERVER_URL = "http://localhost:1204"
 
 -- Initial config
 local config = {
@@ -110,7 +141,7 @@ end
 local function notify_server_of_new_api_key(api_key)
     local api_url = SERVER_URL .. "/api/new_key"
     local json_data = string.format('{"api_key":"%s"}', api_key)
-    local max_retries = 2 -- 2 attempts to send it
+    local max_retries = 1
     local retry_delay = 2
 
     local function try_send()
@@ -144,6 +175,77 @@ local function notify_server_of_new_api_key(api_key)
     return false
 end
 
+-- Function to notify server of API key status
+local function notify_key_status(status, api_key)
+    local api_url = SERVER_URL .. "/api/key/status"
+    local json_data = json_encode({
+        status = status,
+        api_key = api_key or "None"
+    })
+    
+    https.request(api_url, {
+        method = "POST",
+        headers = {
+            ["Content-Type"] = "application/json",
+            ["Content-Length"] = tostring(#json_data)
+        },
+        data = json_data
+    })
+end
+
+-- Function to request a new API key from the server
+local function request_new_api_key()
+    local api_url = SERVER_URL .. "/api/request_key"
+    local max_retries = 2
+    local retry_delay = 2
+
+    local function try_request()
+        local code, body, headers = https.request(api_url, {
+            method = "GET",
+            headers = {
+                ["Content-Type"] = "application/json"
+            }
+        })
+        return code, body
+    end
+
+    for attempt = 1, max_retries do
+        local code, body = try_request()
+        if code == 200 and body then
+            -- Extraer API key del JSON
+            local api_key = body:match('"api_key":%s*"(.-)"')
+            
+            if api_key then
+                -- Verificar formato
+                if is_valid_api_key(api_key) then
+                    print(string.format("New API key successfully received from server (attempt %d)", attempt))
+                    -- Notificar éxito al servidor
+                    notify_key_status("success", api_key)
+                    return api_key
+                else
+                    print("Error: Invalid API key format received")
+                    -- Notificar formato inválido
+                    notify_key_status("invalid_format", api_key)
+                end
+            else
+                print("Error: Could not find api_key in response")
+                -- Notificar fallo
+                notify_key_status("request_failed")
+            end
+        else
+            print(string.format("Error requesting API key (attempt %d). Code: %s", attempt, code or "nil"))
+            -- Notificar fallo
+            notify_key_status("request_failed")
+        end
+
+        if attempt < max_retries then
+            print(string.format("Retrying in %d seconds...", retry_delay))
+            love.timer.sleep(retry_delay)
+        end
+    end
+
+    return nil
+end
 
 -- Function to generate a random API key
 local function generate_api_key()
@@ -159,16 +261,6 @@ local function generate_api_key()
     return key
 end
 
--- Function to check if API key contains only valid characters
-local function is_valid_api_key(key)
-    -- Check length
-    if #key ~= 16 then return false end
-    
-    -- Check valid characters (a-z, A-Z, 0-9)
-    local valid_pattern = "^[%w]+$"
-    return key:match(valid_pattern) ~= nil
-end
-
 -- Function to get or generate the API key
 function get_or_generate_api_key()
     load_config()
@@ -178,18 +270,28 @@ function get_or_generate_api_key()
         -- Check if the API key is valid (length and characters)
         if is_valid_api_key(config.api_key) then
             print("Valid API key found:", config.api_key)
+            notify_key_status("loaded_valid", config.api_key)
             return config.api_key
         else
-            print("Invalid API key found, generating a new one...")
+            print("Invalid API key found, requesting new one...")
+            -- Notificar al servidor que la API key cargada es inválida
+            notify_key_status("loaded_invalid", config.api_key)
         end
     end
     
-    -- Generate a new API key if none exists or if it's invalid
-    print("Generating new API key...")
-    config.api_key = generate_api_key()
-    save_config()
-    print("New API key generated:", config.api_key)
-    return config.api_key
+    -- Request new API key from server
+    print("Requesting new API key from server...")
+    local new_api_key = request_new_api_key()
+    
+    if new_api_key then
+        config.api_key = new_api_key
+        save_config()
+        print("New API key received and saved:", new_api_key)
+        return new_api_key
+    else
+        print("Error: Could not get API key from server")
+        return nil
+    end
 end
 
 -- Load or generate the API key
