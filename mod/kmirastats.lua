@@ -2,7 +2,7 @@ local https = require("SMODS.https")
 local KS = SMODS.current_mod
 
 -- URL del servidor al que se envían las estadísticas
-local SERVER_URL = "http://stats.kmiras.com:1204"
+local SERVER_URL = "https://stats.kmiras.com:1204"
 
 -- Configuración inicial
 local config = {
