@@ -1,41 +1,41 @@
 local https = require("SMODS.https")
 local KS = SMODS.current_mod
 
--- #######################################
--- ######## CONFIGURACION DEL MOD ########
--- #######################################
+-- ###################################
+-- ######## MOD CONFIGURATION ########
+-- ###################################
 
--- URL del servidor al que se envían las estadísticas
+-- Server URL to send statistics
 local SERVER_URL = "https://stats.kmiras.com:1204"
 
--- Configuración inicial
+-- Initial config
 local config = {
     api_key = nil,
     storage_mode = "api"
 }
 
--- Función para cargar la configuración
+-- Function to load the config or create the directory/file if it doesn't exist
 local function load_config()
-    -- Crear el directorio si no existe
+    -- Create the directory if it doesn't exist
     local success = love.filesystem.createDirectory("config")
     if not success then
-        print("Error al crear el directorio config")
+        print("Error creating config directory")
         return
     end
 
     local file = io.open("config/kmirastats.jkr", "r")
     if not file then
-        -- Si el archivo no existe, crearlo
+        -- Create the file if it doesn't exist
         file = io.open("config/kmirastats.jkr", "w")
         if file then
             file:close()
-            print("Archivo de configuración creado")
+            print("Config file created successfully")
         else
-            print("Error al crear el archivo de configuración")
+            print("Error creating config file")
             return
         end
     else
-        -- Si el archivo existe, leer el contenido
+        -- If the file already exists, read its content
         local content = file:read("*all")
         file:close()
         if content and content ~= "" then
@@ -49,16 +49,16 @@ local function load_config()
     end
 end
 
--- Función para guardar la configuración
+-- Function to save the config
 local function save_config()
     love.filesystem.createDirectory("config")
     local config_data = string.format("{api_key='%s', storage_mode='%s'}", config.api_key or "", config.storage_mode or "api")
     love.filesystem.write("config/kmirastats.jkr", config_data)
 end
 
--- ################################################
--- ######## OBTENER ESTADISTICAS DEL JUEGO ########
--- ################################################
+-- ###############################
+-- ######## GET RUN STATS ########
+-- ###############################
 
 function gameDataFromGame(game, savedGame)
     local gameData = game.GAME
@@ -102,17 +102,17 @@ function GetMostPlayedHand(game)
     return localize(handname, "poker_hands")
 end
 
--- #####################################################################################
--- ######## GENERAR API KEY SI NO ESTA CREADA Y ENVIARLA O LEERLA SI YA LO ESTÁ ########
--- #####################################################################################
+-- #######################################################################################
+-- ######## GENERATE APIKEY IF IT DOESN'T EXIST AND THEREFORE SEND IT TO THE SRV  ########
+-- #######################################################################################
 
--- Funcion de enviar nueva API key al servidor
+-- Function to notify the server of a new API key
 local function notify_server_of_new_api_key(api_key)
     local api_url = SERVER_URL .. "/api/new_key"
     local json_data = string.format('{"api_key":"%s"}', api_key)
-    local max_retries = 3
-    local retry_delay = 2 -- segundos
-    
+    local max_retries = 2 -- 2 attempts to send it
+    local retry_delay = 2
+
     local function try_send()
         local code, body, headers = https.request(api_url, {
             method = "POST",
@@ -125,29 +125,27 @@ local function notify_server_of_new_api_key(api_key)
         return code, body
     end
 
-    -- Intentar enviar con reintentos
     for attempt = 1, max_retries do
         local code, body = try_send()
-        
         if code == 200 then
-            print(string.format("Nueva API key enviada correctamente al servidor (intento %d)", attempt))
+            print(string.format("New API key successfully sent to the server (attempt %d)", attempt))
             return true
         else
-            print(string.format("Error al enviar API key (intento %d). Código: %s", attempt, code or "nil"))
-            print("Respuesta:", body or "Sin respuesta")
-            
+            print(string.format("Error sending API key (attempt %d). Code: %s", attempt, code or "nil"))
+            print("Response:", body or "No response")
             if attempt < max_retries then
-                print(string.format("Reintentando en %d segundos...", retry_delay))
+                print(string.format("Retrying in %d seconds...", retry_delay))
                 love.timer.sleep(retry_delay)
             end
         end
     end
 
-    print("Error: No se pudo enviar la API key después de " .. max_retries .. " intentos")
+    print("Error: Could not send the API key after 2 attempts")
     return false
 end
 
--- Funcion para generar API key
+
+-- Function to generate a random API key
 local function generate_api_key()
     local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     local key = ""
@@ -156,39 +154,52 @@ local function generate_api_key()
         key = key .. chars:sub(rand, rand)
     end
 
-    -- Notificar al servidor sobre la nueva API key
     notify_server_of_new_api_key(key)
 
     return key
 end
 
--- Funcion obtener o generar (y enviar al srv) la API key
+-- Function to check if API key contains only valid characters
+local function is_valid_api_key(key)
+    -- Check length
+    if #key ~= 16 then return false end
+    
+    -- Check valid characters (a-z, A-Z, 0-9)
+    local valid_pattern = "^[%w]+$"
+    return key:match(valid_pattern) ~= nil
+end
+
+-- Function to get or generate the API key
 function get_or_generate_api_key()
-    -- Cargar configuración primero si existe
     load_config()
     
-    -- Verificar si ya tenemos una API key válida
+    -- Verify if the API key already exists
     if config.api_key and config.api_key ~= "" then
-        print("Usando API key existente:", config.api_key)
-        return config.api_key
+        -- Check if the API key is valid (length and characters)
+        if is_valid_api_key(config.api_key) then
+            print("Valid API key found:", config.api_key)
+            return config.api_key
+        else
+            print("Invalid API key found, generating a new one...")
+        end
     end
     
-    -- Si no hay API key, generar una nueva
-    print("Generando nueva API key...")
+    -- Generate a new API key if none exists or if it's invalid
+    print("Generating new API key...")
     config.api_key = generate_api_key()
     save_config()
-    print("Nueva API key generada:", config.api_key)
+    print("New API key generated:", config.api_key)
     return config.api_key
 end
 
--- Carga o crea la API Key
+-- Load or generate the API key
 local api_key = get_or_generate_api_key()
 
--- ######################################################################
--- ######## ENVIAR ESTADÍSTICAS AL SERVIDOR O GUARDAR LOCALMENTE ########
--- ######################################################################
+-- ##############################################################
+-- ######## SEND STATS TO THE SRV OR GENERATE IT LOCALLY ########
+-- ##############################################################
 
--- Escapar cadenas para JSON
+-- Escape function for JSON strings
 local function escape_json(str)
     if not str then return "" end
     return tostring(str)
@@ -198,7 +209,7 @@ local function escape_json(str)
         :gsub('\r', '\\r')
 end
 
--- Generar JSON para estadísticas
+-- Generate JSON from stats
 local function stats_to_json(stats, api_key)
     local t = {
         time = os.date("%Y-%m-%d %H:%M:%S"),
@@ -218,7 +229,6 @@ local function stats_to_json(stats, api_key)
     }
     if api_key then t.api_key = escape_json(api_key) end
 
-    -- Optimizado: usar tabla para concatenación eficiente
     local json_parts = {"{"}
     local first = true
     for k, v in pairs(t) do
@@ -231,7 +241,7 @@ local function stats_to_json(stats, api_key)
     return table.concat(json_parts)
 end
 
--- Contar partidas por delimitador
+-- Count the number of runs in the local stats file
 local function get_run_count()
     local count = 0
     local f = io.open("./kmirastats.txt", "r")
@@ -244,7 +254,7 @@ local function get_run_count()
     return count + 1
 end
 
--- Guardar estadísticas en archivo de texto
+-- Save stats to a local file
 local function save_stats_to_local_file(stats)
     local run_number = get_run_count()
     local current_time = os.date("%Y-%m-%d %H:%M:%S")
@@ -282,11 +292,11 @@ local function save_stats_to_local_file(stats)
         f:write(formatted_stats .. "\n")
         f:close()
     else 
-        print("Error al guardar estadísticas.") 
+        print("Error saving stats to local file") 
     end
 end
 
--- Enviar estadísticas a la API
+-- Send stats to the API
 local function send_stats_to_api(stats)
     local json = stats_to_json(stats, get_or_generate_api_key())
     local code, body = https.request(SERVER_URL.."/api/stats", {
@@ -294,24 +304,24 @@ local function send_stats_to_api(stats)
         headers = {["Content-Type"]="application/json",["Content-Length"]=#json},
         data = json
     })
-    print(code==200 and "Datos enviados correctamente." or "Error al enviar datos: "..(code or ""))
+    print(code==200 and "Data sent successfully." or "Error sending data: "..(code or ""))
 end
 
--- Enviar o guardar según configuración
+-- Send or save stats based on the storage mode
 local function send_stats(stats)
     if config.storage_mode == "api" then
         send_stats_to_api(stats)
     elseif config.storage_mode == "local" then
         save_stats_to_local_file(stats)
     else
-        print("ERROR: Modo de almacenamiento no válido: " .. tostring(config.storage_mode))
+        print("ERROR: Invalid storage mode: " .. tostring(config.storage_mode))
     end
 end
 
 
 
 -- #################################################################################################
--- ######## OBTENER CUANDO PIERRDE/GANA EL JUGADOR Y MANDAR LA SEÑAL DE ENVIAR ESTADISTICAS ########
+-- ######## OBTAIN WHEN THE PLAYER WINS/LOSES AND SEND THE SIGNAL TO SEND STATISTICS ###############
 -- #################################################################################################
 
 local game_start_run_ref = Game.start_run
@@ -340,12 +350,9 @@ end
 local game_update_ref = Game.update
 
 function Game:update(dt)
-    -- Llamar a la función original de actualización
     game_update_ref(self, dt)
 
-    -- Verificar si los datos ya fueron enviados
     if not G.GAME.data_sent then
-        -- Si G.GAME.won se convierte en true, enviar los datos
         if G.GAME.won then
             G.GAME.data_sent = true
             G.E_MANAGER:add_event(Event({
@@ -394,7 +401,6 @@ KS.extra_tabs = function()
                                 h = 4
                             },
                             nodes = {
-                                -- Bloque Storage Mode
                                 {
                                     n = G.UIT.C,
                                     config = {
@@ -439,7 +445,7 @@ KS.extra_tabs = function()
                                                                 "API: send data to server",
                                                                 "LOCAL: save data locally",
                                                             },
-                                                            opt_callback = "toggle_storage_mode", -- Esto llamará a G.FUNCS.toggle_storage_mode
+                                                            opt_callback = "toggle_storage_mode",
                                                             current_option = config.storage_mode == "api" and 1 or 2,
                                                         })
                                                     }
@@ -481,7 +487,6 @@ KS.extra_tabs = function()
                                 h = 4
                             },
                             nodes = {
-                                -- Bloque API Key
                                 {
                                     n = G.UIT.C,
                                     config = {
@@ -544,7 +549,7 @@ KS.extra_tabs = function()
 end
 
 -- ##############################################
--- ######## FUNCION DE COPIAR LA API KEY ########
+-- ######## FUNCTION TO COPY THE API KEY ########
 -- ##############################################
 
 function G.FUNCS.copy_api_key(e)
@@ -553,15 +558,14 @@ function G.FUNCS.copy_api_key(e)
 end
 
 -- ##############################################
--- ######## FUNCION DE CAMBIAR STORAGE MODE #####
+-- ######## FUNCTION TO CHANGE STORAGE MODE #####
 -- ##############################################
 
 function G.FUNCS.toggle_storage_mode(e)
     local new_mode = e.to_key == 1 and "api" or "local"
     config.storage_mode = new_mode
     
-    -- Debug print
-    print(string.format("Changed to:\nconfig.storage_mode: %s\nfrom_key: %d\nto_key: %d\ncorrectly", 
+    print(string.format("Changed to:\nconfig.storage_mode: %s\nfrom_key: %d\nto_key: %d\ncorrectly",
         config.storage_mode, 
         e.from_key,
         e.to_key))
