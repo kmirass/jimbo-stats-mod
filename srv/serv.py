@@ -3,6 +3,14 @@ import json
 import os
 import time
 import datetime
+import ssl
+
+# Configuración SSL para HTTPS
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain(
+    '/etc/letsencrypt/live/stats.kmiras.com/fullchain.pem',
+    keyfile='/etc/letsencrypt/live/stats.kmiras.com/privkey.pem'
+)
 
 # Lista para almacenar las API keys generadas
 api_keys = []
@@ -187,7 +195,9 @@ class StatsHandler(BaseHTTPRequestHandler):
 def run_server(port=1204):
     server_address = ('', port)
     httpd = ThreadingHTTPServer(server_address, StatsHandler)
-    print(f"Servidor iniciado en el puerto {port}")
+    # Aplicar el contexto SSL al servidor
+    httpd.socket = ssl_context.wrap_socket(httpd.socket, server_side=True)
+    print(f"Servidor HTTPS iniciado en el puerto {port}")
     httpd.serve_forever()
 
 if __name__ == '__main__':
