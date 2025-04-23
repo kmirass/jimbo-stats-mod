@@ -1,6 +1,10 @@
 local https = require("SMODS.https")
 local KS = SMODS.current_mod
 
+-- #######################################
+-- ######## CONFIGURACION DEL MOD ########
+-- #######################################
+
 -- URL del servidor al que se envían las estadísticas
 local SERVER_URL = "https://stats.kmiras.com:1204"
 
@@ -184,22 +188,105 @@ local api_key = get_or_generate_api_key()
 -- ######## ENVIAR ESTADÍSTICAS AL SERVIDOR O GUARDAR LOCALMENTE ########
 -- ######################################################################
 
--- Funcion para enerar JSON para las estadísticas
-local function stats_to_json(stats, api_key)
-    return string.format(
-        '{"%s%s"time":"%s","seed":"%s","deck":"%s","stake":"%s","won":%s,"lostTo":"%s","ante":%d,"round":%d,"mostPlayedHand":"%s","bestHand":"%s","cardsPlayed":%d,"cardsDiscarded":%d,"cardsPurchased":%d,"timesRerolled":%d}',
-        api_key and 'api_key":"'..api_key..'",' or '',
-        "",
-        os.date("%Y-%m-%d %H:%M:%S"),
-        stats.seed or "", stats.deck or "", stats.stake or "",
-        tostring(stats.won), stats.lostTo or "", stats.ante or 0, stats.round or 0,
-        stats.mostPlayedHand or "", stats.bestHand or "",
-        stats.cardsPlayed or 0, stats.cardsDiscarded or 0,
-        stats.cardsPurchased or 0, stats.timesRerolled or 0
-    )
+-- Escapar cadenas para JSON
+local function escape_json(str)
+    if not str then return "" end
+    return tostring(str)
+        :gsub('\\', '\\\\')
+        :gsub('"', '\\"')
+        :gsub('\n', '\\n')
+        :gsub('\r', '\\r')
 end
 
--- Funcion para enviar estadísticas a la API local
+-- Generar JSON para estadísticas
+local function stats_to_json(stats, api_key)
+    local t = {
+        time = os.date("%Y-%m-%d %H:%M:%S"),
+        seed = escape_json(stats.seed),
+        deck = escape_json(stats.deck),
+        stake = escape_json(stats.stake),
+        won = stats.won,
+        lostTo = escape_json(stats.lostTo),
+        ante = stats.ante or 0,
+        round = stats.round or 0,
+        mostPlayedHand = escape_json(stats.mostPlayedHand),
+        bestHand = escape_json(stats.bestHand),
+        cardsPlayed = stats.cardsPlayed or 0,
+        cardsDiscarded = stats.cardsDiscarded or 0,
+        cardsPurchased = stats.cardsPurchased or 0,
+        timesRerolled = stats.timesRerolled or 0
+    }
+    if api_key then t.api_key = escape_json(api_key) end
+
+    -- Optimizado: usar tabla para concatenación eficiente
+    local json_parts = {"{"}
+    local first = true
+    for k, v in pairs(t) do
+        if not first then table.insert(json_parts, ",") end
+        first = false
+        local value_str = (type(v) == "string") and string.format('"%s"', v) or tostring(v)
+        table.insert(json_parts, string.format('"%s":%s', k, value_str))
+    end
+    table.insert(json_parts, "}")
+    return table.concat(json_parts)
+end
+
+-- Contar partidas por delimitador
+local function get_run_count()
+    local count = 0
+    local f = io.open("./kmirastats.txt", "r")
+    if f then
+        for line in f:lines() do
+            if line:find("RUN INFO") then count = count + 1 end
+        end
+        f:close()
+    end
+    return count + 1
+end
+
+-- Guardar estadísticas en archivo de texto
+local function save_stats_to_local_file(stats)
+    local run_number = get_run_count()
+    local current_time = os.date("%Y-%m-%d %H:%M:%S")
+    local template = [[
+┌────────────────────────────────────────────────┐ 
+│                 RUN INFO (N %03d)               │
+├─────────────────────┬──────────────────────────┤
+│         Date/Time   │ %s      │
+│              Seed   │ %-22s   │
+│              Deck   │ %-22s   │
+│             Stake   │ %-22s   │
+├─────────────────────┼──────────────────────────┤
+│            Result   │ %-22s   │
+│              Ante   │ %-22d   │
+│             Round   │ %-22d   │
+│  Most Played Hand   │ %-22s   │
+│         Best Hand   │ %-22s   │
+│      Cards Played   │ %-22d   │
+│   Cards Discarded   │ %-22d   │
+│   Cards Purchased   │ %-22d   │
+│    Times Rerolled   │ %-22d   │
+├─────────────────────┴──────────────────────────┤
+│ v0.0.3                        stats.kmiras.com │
+└────────────────────────────────────────────────┘
+]]
+    local result_text = stats.won and "Won!" or string.format("X Lost (to %s)", stats.lostTo or "-")
+    local formatted_stats = string.format(template,
+        run_number, current_time, stats.seed or "", stats.deck or "", stats.stake or "",
+        result_text, stats.ante or 0, stats.round or 0, stats.mostPlayedHand or "",
+        stats.bestHand or "", stats.cardsPlayed or 0, stats.cardsDiscarded or 0,
+        stats.cardsPurchased or 0, stats.timesRerolled or 0
+    )
+    local f = io.open("./kmirastats.txt", "a")
+    if f then 
+        f:write(formatted_stats .. "\n")
+        f:close()
+    else 
+        print("Error al guardar estadísticas.") 
+    end
+end
+
+-- Enviar estadísticas a la API
 local function send_stats_to_api(stats)
     local json = stats_to_json(stats, get_or_generate_api_key())
     local code, body = https.request(SERVER_URL.."/api/stats", {
@@ -210,29 +297,18 @@ local function send_stats_to_api(stats)
     print(code==200 and "Datos enviados correctamente." or "Error al enviar datos: "..(code or ""))
 end
 
--- Funcion para guardar estadísticas en un archivo JSON local
-local function save_stats_to_local_file(stats)
-    local f = io.open("./kmirastats.json", "a")
-    if f then f:write(stats_to_json(stats).."\n"); f:close()
-    else print("Error al guardar estadísticas.") end
-end
-
--- Enviar al servidor o guardar localmente según la configuración
+-- Enviar o guardar según configuración
 local function send_stats(stats)
     if config.storage_mode == "api" then
         send_stats_to_api(stats)
     elseif config.storage_mode == "local" then
         save_stats_to_local_file(stats)
     else
-        print("ERROR: Modo de almacenamiento no válido: " .. config.storage_mode)
+        print("ERROR: Modo de almacenamiento no válido: " .. tostring(config.storage_mode))
     end
 end
 
---[[
 
-save_stats_to_local_file(stats)
-
-]]--
 
 -- #################################################################################################
 -- ######## OBTENER CUANDO PIERRDE/GANA EL JUGADOR Y MANDAR LA SEÑAL DE ENVIAR ESTADISTICAS ########
