@@ -51,8 +51,8 @@ class StatsHandler(BaseHTTPRequestHandler):
         self._set_headers()
 
     def do_GET(self):
+        # Agregar manejo de archivos estáticos
         if self.path == '/':
-            # Mostrar la página HTML
             self._set_headers('text/html')
             if os.path.exists('index.html'):
                 with open('index.html', 'rb') as file:
@@ -60,6 +60,21 @@ class StatsHandler(BaseHTTPRequestHandler):
             else:
                 # Si no existe el archivo index.html, crear una respuesta HTML básica
                 self.wfile.write('<html><body><h1>Error: No se encontró el archivo index.html</h1></body></html>'.encode('utf-8'))
+        elif self.path == '/styles.css':
+            self._set_headers('text/css')
+            if os.path.exists('styles.css'):
+                with open('styles.css', 'rb') as file:
+                    self.wfile.write(file.read())
+            else:
+                self.send_error(404)
+        elif self.path.startswith('/img/'):
+            # Manejar imágenes si las hay
+            try:
+                with open('.' + self.path, 'rb') as file:
+                    self._set_headers('image/' + self.path.split('.')[-1])
+                    self.wfile.write(file.read())
+            except:
+                self.send_error(404)
         elif self.path == '/api/keys':
             # Devolver la lista de API keys en formato JSON
             self._set_headers()
