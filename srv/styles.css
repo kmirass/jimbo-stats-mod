@@ -1,0 +1,310 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg-main: #111;
+  --bg-card: #1a1a1a;
+  --bg-table-header: #222;
+  --bg-table-row-hover: #191919;
+  --bg-button: #d82934;
+  --bg-button-hover: #b71c1c;
+  --bg-nav: #191919;
+  --border: #333;
+  --border-card: #222;
+  --text-main: #fff;
+  --text-secondary: #ccc;
+  --text-accent: #2ecc71;
+  --text-error: #d82934;
+  --text-table-header: #fff;
+  --radius: 6px;
+  --shadow: 0 2px 10px rgba(0,0,0,0.5);
+  --transition: 0.2s all;
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-main);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+main {
+    max-width: 1500px;
+    margin: 40px auto;
+    padding: 32px 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  
+
+h1, h2, h3 {
+  color: var(--text-main);
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+h1 {
+  font-size: 2.2em;
+  margin-bottom: 32px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+h2 {
+  font-size: 1.3em;
+  margin-bottom: 18px;
+}
+
+h3 {
+  font-size: 1.1em;
+  margin-bottom: 10px;
+}
+
+.alert, .notification {
+  background: var(--bg-card);
+  color: var(--text-accent);
+  border: 1px solid var(--text-accent);
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  font-size: 1em;
+  display: block;
+  transition: var(--transition);
+}
+
+.alert-error {
+  color: var(--text-error);
+  border-color: var(--text-error);
+}
+
+.alert-success {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+.hidden {
+  display: none !important;
+}
+
+nav {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.nav-button, .tab {
+  display: inline-block;
+  background: var(--bg-nav);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 10px 22px;
+  margin-right: 6px;
+  font-family: inherit;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  outline: none;
+  box-shadow: none;
+}
+
+.nav-button.active, .tab.active {
+  background: var(--bg-button);
+  color: #fff;
+  border-color: var(--bg-button);
+}
+
+.nav-button:hover, .tab:hover {
+  background: var(--bg-button-hover);
+  color: #fff;
+  border-color: var(--bg-button-hover);
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.3s;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* CAMBIO: las tarjetas siempre en una sola línea, con scroll horizontal si no caben */
+.stats-grid, 
+#stats > div {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #333 #1a1a1a;
+  justify-content: center;
+}
+.stats-grid::-webkit-scrollbar,
+#stats > div::-webkit-scrollbar {
+  height: 8px;
+  background: #1a1a1a;
+}
+.stats-grid::-webkit-scrollbar-thumb,
+#stats > div::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 6px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 0;
+  min-width: 220px;
+  max-width: 260px;
+  flex: 0 0 220px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 10px 0 6px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  background: transparent;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+  color: var(--text-main);
+}
+
+.card-body {
+  padding: 18px 0 14px 0;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2.2em;
+  color: var(--text-accent);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.stat-title {
+  font-size: 1em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+#datos-detallados, #keys-list {
+  margin-top: 18px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 0.98em;
+}
+
+th, td {
+  padding: 11px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+th {
+  background: var(--bg-table-header);
+  color: var(--text-table-header);
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+}
+
+tr:hover {
+  background: var(--bg-table-row-hover);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.btn-submit {
+  background: var(--bg-button);
+  color: #fff;
+  border: none;
+  padding: 12px 30px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1em;
+  margin-top: 18px;
+  margin-bottom: 0;
+  transition: background var(--transition);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.btn-submit:hover {
+  background: var(--bg-button-hover);
+}
+
+.api-keys-list {
+  margin-top: 12px;
+}
+
+.api-key-item {
+  background: var(--bg-card);
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--bg-button);
+  color: var(--text-main);
+}
+
+/* Ya no necesitas .stats-grid con grid-template-columns, solo flex */
+
+@media (max-width: 900px) {
+  main {
+    width: 98%;
+    padding: 10px 2vw;
+  }
+  .stats-grid, #stats > div {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  main {
+    padding: 8px 2vw;
+  }
+  h1 {
+    font-size: 1.4em;
+  }
+  .btn-submit {
+    width: 100%;
+    padding: 12px 0;
+  }
+}
+
+/* Scrollbar personalizado global */
+::-webkit-scrollbar {
+  width: 10px;
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-button-hover);
+}

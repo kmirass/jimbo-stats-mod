@@ -3,6 +3,14 @@ import json
 import os
 import time
 import datetime
+import ssl
+
+# Configuración SSL para HTTPS
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain(
+    '/etc/letsencrypt/live/stats.kmiras.com/fullchain.pem',
+    keyfile='/etc/letsencrypt/live/stats.kmiras.com/privkey.pem'
+)
 
 # Lista para almacenar las API keys generadas
 api_keys = []
@@ -43,8 +51,8 @@ class StatsHandler(BaseHTTPRequestHandler):
         self._set_headers()
 
     def do_GET(self):
+        # Agregar manejo de archivos estáticos
         if self.path == '/':
-            # Mostrar la página HTML
             self._set_headers('text/html')
             if os.path.exists('index.html'):
                 with open('index.html', 'rb') as file:
@@ -52,6 +60,21 @@ class StatsHandler(BaseHTTPRequestHandler):
             else:
                 # Si no existe el archivo index.html, crear una respuesta HTML básica
                 self.wfile.write('<html><body><h1>Error: No se encontró el archivo index.html</h1></body></html>'.encode('utf-8'))
+        elif self.path == '/styles.css':
+            self._set_headers('text/css')
+            if os.path.exists('styles.css'):
+                with open('styles.css', 'rb') as file:
+                    self.wfile.write(file.read())
+            else:
+                self.send_error(404)
+        elif self.path.startswith('/img/'):
+            # Manejar imágenes si las hay
+            try:
+                with open('.' + self.path, 'rb') as file:
+                    self._set_headers('image/' + self.path.split('.')[-1])
+                    self.wfile.write(file.read())
+            except:
+                self.send_error(404)
         elif self.path == '/api/keys':
             # Devolver la lista de API keys en formato JSON
             self._set_headers()
@@ -187,7 +210,9 @@ class StatsHandler(BaseHTTPRequestHandler):
 def run_server(port=1204):
     server_address = ('', port)
     httpd = ThreadingHTTPServer(server_address, StatsHandler)
-    print(f"Servidor iniciado en el puerto {port}")
+    # Aplicar el contexto SSL al servidor
+    httpd.socket = ssl_context.wrap_socket(httpd.socket, server_side=True)
+    print(f"Servidor HTTPS iniciado en el puerto {port}")
     httpd.serve_forever()
 
 if __name__ == '__main__':
