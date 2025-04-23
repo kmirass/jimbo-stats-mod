@@ -565,7 +565,7 @@ function G.FUNCS.toggle_storage_mode(e)
     local new_mode = e.to_key == 1 and "api" or "local"
     config.storage_mode = new_mode
     
-    print(string.format("Changed to:\nconfig.storage_mode: %s\nfrom_key: %d\nto_key: %d\ncorrectly",
+    print(string.format("Changed to:\nconfig.storage_mode: %s\nfrom_key: %d\nto_key: %d",
         config.storage_mode, 
         e.from_key,
         e.to_key))
