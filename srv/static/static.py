@@ -25,11 +25,6 @@ class HTTPSHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
             self.path = f"/{HTML_FILE}"
-        elif self.path == '/favicon.ico':
-            self.path = '../img/favicon.ico'
-            if not os.path.exists(self.path):
-                self.send_error(404, "Favicon not found")
-                return
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
 # Manejador para redirección HTTP a HTTPS
